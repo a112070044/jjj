@@ -1,0 +1,149 @@
+
+<h2 class="sr-only">台灣學生出國交流人數動態長條圖，105至113學年度前10大熱門國家</h2>
+
+<div style="padding: 1rem 0 0;">
+  <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px;">
+    <span style="font-size:14px; color:var(--color-text-secondary);">前 10 大熱門出國交流國家</span>
+    <span id="year-label" style="font-size:28px; font-weight:500; color:var(--color-text-primary);">105 學年度</span>
+  </div>
+
+  <div style="position:relative; width:100%; height:420px;">
+    <canvas id="barChart" role="img" aria-label="各學年度台灣學生出國交流前10大國家人數長條圖"></canvas>
+  </div>
+
+  <div style="margin-top:16px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+    <button id="playBtn" style="display:flex; align-items:center; gap:6px; padding:8px 18px; font-size:14px;">
+      <i class="ti ti-player-play" aria-hidden="true"></i> 播放動畫
+    </button>
+    <button id="pauseBtn" style="display:flex; align-items:center; gap:6px; padding:8px 18px; font-size:14px;">
+      <i class="ti ti-player-pause" aria-hidden="true"></i> 暫停
+    </button>
+    <button id="resetBtn" style="display:flex; align-items:center; gap:6px; padding:8px 18px; font-size:14px;">
+      <i class="ti ti-refresh" aria-hidden="true"></i> 回到原點
+    </button>
+    <span style="font-size:13px; color:var(--color-text-secondary); margin-left:8px;">學年度：</span>
+    <div id="year-pills" style="display:flex; gap:6px; flex-wrap:wrap;"></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const DATA = {
+  "105": {"日本":2744,"大陸地區":2453,"美國":1585,"大韓民國(南韓)":1180,"德意志聯邦共和國":853,"法國":650,"西班牙王國":444,"加拿大":308,"荷蘭王國":265,"捷克共和國":244},
+  "106": {"日本":3135,"大陸地區":3446,"美國":1491,"大韓民國(南韓)":1431,"德意志聯邦共和國":972,"法國":693,"西班牙王國":443,"加拿大":345,"荷蘭王國":265,"捷克共和國":243},
+  "107": {"日本":2934,"大陸地區":3791,"美國":1290,"大韓民國(南韓)":1539,"德意志聯邦共和國":1118,"法國":694,"西班牙王國":477,"加拿大":298,"荷蘭王國":289,"捷克共和國":296},
+  "108": {"日本":2148,"大陸地區":1630,"美國":938,"大韓民國(南韓)":833,"德意志聯邦共和國":905,"法國":542,"西班牙王國":364,"加拿大":222,"荷蘭王國":255,"捷克共和國":244},
+  "109": {"日本":363,"大陸地區":163,"美國":90,"大韓民國(南韓)":329,"德意志聯邦共和國":328,"法國":114,"西班牙王國":32,"加拿大":8,"荷蘭王國":42,"捷克共和國":64},
+  "110": {"日本":586,"大陸地區":453,"美國":403,"大韓民國(南韓)":506,"德意志聯邦共和國":477,"法國":332,"西班牙王國":111,"加拿大":80,"荷蘭王國":154,"捷克共和國":121},
+  "111": {"日本":2275,"大陸地區":504,"美國":804,"大韓民國(南韓)":898,"德意志聯邦共和國":857,"法國":618,"西班牙王國":304,"加拿大":166,"荷蘭王國":248,"捷克共和國":233},
+  "112": {"日本":2815,"大陸地區":1125,"美國":898,"大韓民國(南韓)":1077,"德意志聯邦共和國":976,"法國":682,"西班牙王國":304,"加拿大":174,"荷蘭王國":285,"捷克共和國":315},
+  "113": {"日本":2771,"大陸地區":1219,"美國":666,"大韓民國(南韓)":1122,"德意志聯邦共和國":1011,"法國":766,"西班牙王國":283,"加拿大":158,"荷蘭王國":304,"捷克共和國":406}
+};
+
+const YEARS = Object.keys(DATA);
+const COUNTRIES = ["日本","大陸地區","美國","大韓民國(南韓)","德意志聯邦共和國","法國","西班牙王國","加拿大","荷蘭王國","捷克共和國"];
+const COLORS = ["#378ADD","#D4537E","#E59A28","#1D9E75","#7F77DD","#D85A30","#639922","#73726c","#3c94b5","#9b6ecf"];
+
+let currentIdx = 0;
+let timer = null;
+
+function getYearData(year) {
+  const d = DATA[year];
+  const sorted = [...COUNTRIES].sort((a,b) => (d[b]||0) - (d[a]||0));
+  return { labels: sorted, values: sorted.map(c => d[c]||0) };
+}
+
+const ctx = document.getElementById('barChart').getContext('2d');
+const initData = getYearData("105");
+
+const chart = new Chart(ctx, {
+  type: 'bar',
+  data: {
+    labels: initData.labels,
+    datasets: [{
+      label: '人數',
+      data: initData.values,
+      backgroundColor: initData.labels.map((_,i) => COLORS[i % COLORS.length]),
+      borderRadius: 4,
+      borderSkipped: false
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: { duration: 700, easing: 'easeInOutQuart' },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: ctx => ' ' + ctx.raw.toLocaleString() + ' 人'
+        }
+      }
+    },
+    scales: {
+      x: {
+        beginAtZero: true,
+        max: 4200,
+        grid: { color: 'rgba(128,128,128,0.1)' },
+        ticks: {
+          color: '#888',
+          font: { size: 12 },
+          callback: v => v.toLocaleString()
+        }
+      },
+      y: {
+        ticks: { color: 'var(--color-text-primary)', font: { size: 13 } },
+        grid: { display: false }
+      }
+    }
+  }
+});
+
+function updateChart(yearStr) {
+  const d = getYearData(yearStr);
+  chart.data.labels = d.labels;
+  chart.data.datasets[0].data = d.values;
+  chart.data.datasets[0].backgroundColor = d.labels.map((_,i) => COLORS[i % COLORS.length]);
+  chart.update();
+  document.getElementById('year-label').textContent = yearStr + ' 學年度';
+  document.querySelectorAll('.yr-pill').forEach(p => {
+    p.style.background = p.dataset.year === yearStr ? '#378ADD' : 'var(--color-background-secondary)';
+    p.style.color = p.dataset.year === yearStr ? '#fff' : 'var(--color-text-secondary)';
+    p.style.borderColor = p.dataset.year === yearStr ? '#378ADD' : 'var(--color-border-tertiary)';
+  });
+}
+
+const pillContainer = document.getElementById('year-pills');
+YEARS.forEach(y => {
+  const pill = document.createElement('button');
+  pill.textContent = y;
+  pill.className = 'yr-pill';
+  pill.dataset.year = y;
+  pill.style.cssText = 'padding:4px 10px; font-size:12px; border:0.5px solid var(--color-border-tertiary); border-radius:20px; cursor:pointer; background:var(--color-background-secondary); color:var(--color-text-secondary); transition: all 0.2s;';
+  pill.onclick = () => { stopTimer(); currentIdx = YEARS.indexOf(y); updateChart(y); };
+  pillContainer.appendChild(pill);
+});
+updateChart("105");
+
+function stopTimer() {
+  if (timer) { clearInterval(timer); timer = null; }
+}
+
+document.getElementById('playBtn').onclick = () => {
+  stopTimer();
+  timer = setInterval(() => {
+    currentIdx = (currentIdx + 1) % YEARS.length;
+    updateChart(YEARS[currentIdx]);
+    if (currentIdx === YEARS.length - 1) stopTimer();
+  }, 1200);
+};
+
+document.getElementById('pauseBtn').onclick = stopTimer;
+
+document.getElementById('resetBtn').onclick = () => {
+  stopTimer();
+  currentIdx = 0;
+  updateChart(YEARS[0]);
+};
+</script>
