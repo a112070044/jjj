@@ -1,0 +1,5008 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大專院校本國學生出國進修交流人數樹狀圖</title>
+    <!-- 引入 D3.js v7 -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Microsoft JhengHei", sans-serif;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f8f9fa;
+            color: #333;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            background: linear-gradient(135deg, #1f4068, #162447);
+            color: white;
+            padding: 24px 30px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        header h1 {
+            margin: 0 0 10px 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        header p {
+            margin: 0;
+            font-size: 14px;
+            opacity: 0.85;
+        }
+        .controls-panel {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .btn-group {
+            display: flex;
+            gap: 10px;
+        }
+        .btn {
+            background-color: #e9ecef;
+            border: 1px solid #ced4da;
+            color: #495057;
+            padding: 8px 16px;
+            font-size: 14px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+        .btn:hover {
+            background-color: #dee2e6;
+        }
+        .btn.active {
+            background-color: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            font-size: 12px;
+            background: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .legend-color {
+            width: 14px;
+            height: 14px;
+            border-radius: 3px;
+        }
+        #chart-wrapper {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            overflow: hidden;
+            position: relative;
+        }
+        svg {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        .node-rect {
+            stroke: #fff;
+            stroke-width: 1px;
+            transition: fill-opacity 0.2s ease;
+            cursor: pointer;
+        }
+        .node-rect:hover {
+            fill-opacity: 0.95 !important;
+        }
+        .node-label {
+            font-size: 11px;
+            pointer-events: none;
+            fill: #111;
+        }
+        .node-value {
+            font-size: 10px;
+            fill: #444;
+            pointer-events: none;
+        }
+        /* Tooltip style */
+        .custom-tooltip {
+            position: absolute;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.98);
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            pointer-events: none;
+            font-size: 13px;
+            line-height: 1.5;
+            color: #333;
+            display: none;
+            z-index: 1000;
+            min-width: 220px;
+        }
+        .tooltip-title {
+            font-weight: bold;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 6px;
+            margin-bottom: 6px;
+            color: #162447;
+        }
+        .tooltip-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 3px;
+        }
+        .tooltip-value {
+            font-weight: 600;
+            color: #007bff;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            font-size: 12px;
+            color: #888;
+            padding-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>大專院校本國學生出國進修交流人數樹狀圖 (Treemap)</h1>
+        <p>資料來源：教育部統計處 | 分析時間段：113學年度第2學期 (最新資料統計)</p>
+    </header>
+
+    <div class="controls-panel">
+        <div>
+            <strong style="font-size:14px; margin-right:10px;">切換篩選指標：</strong>
+            <div class="btn-group">
+                <button class="btn active" onclick="updateMetric('value', event)">總出國交流人數</button>
+                <button class="btn" onclick="updateMetric('detail_long', event)">至少 1 學期以上人數</button>
+                <button class="btn" onclick="updateMetric('detail_short', event)">未滿 1 學期人數</button>
+            </div>
+        </div>
+        <div style="font-size: 13px; color: #666;">
+            💡 提示：滑鼠懸停在方塊上可檢視詳細數據與完整的國家/地區路徑。
+        </div>
+    </div>
+
+    <div id="legend-container" class="legend"></div>
+
+    <div id="chart-wrapper">
+        <div id="tooltip" class="custom-tooltip"></div>
+        <div id="chart"></div>
+    </div>
+
+    <div class="footer">
+        由 D3.js 自動渲染生成 • 階層關係：地理區域 ➔ 國家/地區 ➔ 學校名稱
+    </div>
+</div>
+
+<script>
+    // 內嵌處理好的資料
+    const rawTreeData = {
+  "name": "中華民國大專院校學生出國交流（113學年度第2學期）",
+  "children": [
+    {
+      "name": "中南美洲",
+      "children": [
+        {
+          "name": "墨西哥合眾國",
+          "children": [
+            {
+              "name": "國立政治大學",
+              "value": 4,
+              "detail_long": 4,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "輔仁大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            }
+          ]
+        },
+        {
+          "name": "阿根廷",
+          "children": [
+            {
+              "name": "國立政治大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "其他亞洲地區",
+      "children": [
+        {
+          "name": "俄羅斯聯邦",
+          "children": [
+            {
+              "name": "淡江大學學校財團法人淡江大學",
+              "value": 9,
+              "detail_long": 9,
+              "detail_short": 0
+            }
+          ]
+        },
+        {
+          "name": "土耳其共和國",
+          "children": [
+            {
+              "name": "國立政治大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立清華大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            }
+          ]
+        },
+        {
+          "name": "大韓民國(南韓)",
+          "children": [
+            {
+              "name": "中國文化大學",
+              "value": 72,
+              "detail_long": 72,
+              "detail_short": 0
+            },
+            {
+              "name": "國立屏東大學",
+              "value": 53,
+              "detail_long": 0,
+              "detail_short": 53
+            },
+            {
+              "name": "國立政治大學",
+              "value": 36,
+              "detail_long": 36,
+              "detail_short": 0
+            },
+            {
+              "name": "銘傳大學",
+              "value": 22,
+              "detail_long": 22,
+              "detail_short": 0
+            },
+            {
+              "name": "逢甲大學",
+              "value": 20,
+              "detail_long": 14,
+              "detail_short": 6
+            },
+            {
+              "name": "國立臺灣師範大學",
+              "value": 18,
+              "detail_long": 18,
+              "detail_short": 0
+            },
+            {
+              "name": "中原大學",
+              "value": 17,
+              "detail_long": 17,
+              "detail_short": 0
+            },
+            {
+              "name": "東吳大學",
+              "value": 17,
+              "detail_long": 17,
+              "detail_short": 0
+            },
+            {
+              "name": "輔仁大學",
+              "value": 17,
+              "detail_long": 17,
+              "detail_short": 0
+            },
+            {
+              "name": "元智大學",
+              "value": 15,
+              "detail_long": 4,
+              "detail_short": 11
+            },
+            {
+              "name": "弘光科技大學",
+              "value": 15,
+              "detail_long": 0,
+              "detail_short": 15
+            },
+            {
+              "name": "國立中央大學",
+              "value": 13,
+              "detail_long": 4,
+              "detail_short": 9
+            },
+            {
+              "name": "國立陽明交通大學",
+              "value": 13,
+              "detail_long": 0,
+              "detail_short": 13
+            },
+            {
+              "name": "文藻學校財團法人文藻外語大學",
+              "value": 11,
+              "detail_long": 11,
+              "detail_short": 0
+            },
+            {
+              "name": "世新大學",
+              "value": 10,
+              "detail_long": 10,
+              "detail_short": 0
+            },
+            {
+              "name": "臺北市立大學",
+              "value": 10,
+              "detail_long": 10,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺北大學",
+              "value": 9,
+              "detail_long": 9,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺南大學",
+              "value": 9,
+              "detail_long": 8,
+              "detail_short": 1
+            },
+            {
+              "name": "長榮大學",
+              "value": 9,
+              "detail_long": 9,
+              "detail_short": 0
+            },
+            {
+              "name": "靜宜大學",
+              "value": 9,
+              "detail_long": 9,
+              "detail_short": 0
+            },
+            {
+              "name": "佛光大學",
+              "value": 8,
+              "detail_long": 8,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺中科技大學",
+              "value": 8,
+              "detail_long": 8,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣大學",
+              "value": 8,
+              "detail_long": 8,
+              "detail_short": 0
+            },
+            {
+              "name": "國立清華大學",
+              "value": 7,
+              "detail_long": 7,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺北教育大學",
+              "value": 7,
+              "detail_long": 7,
+              "detail_short": 0
+            },
+            {
+              "name": "中華大學學校財團法人中華大學",
+              "value": 6,
+              "detail_long": 0,
+              "detail_short": 6
+            },
+            {
+              "name": "國立中興大學",
+              "value": 6,
+              "detail_long": 6,
+              "detail_short": 0
+            },
+            {
+              "name": "國立成功大學",
+              "value": 6,
+              "detail_long": 6,
+              "detail_short": 0
+            },
+            {
+              "name": "國立雲林科技大學",
+              "value": 6,
+              "detail_long": 4,
+              "detail_short": 2
+            },
+            {
+              "name": "國立高雄科技大學",
+              "value": 6,
+              "detail_long": 6,
+              "detail_short": 0
+            },
+            {
+              "name": "萬能學校財團法人萬能科技大學",
+              "value": 6,
+              "detail_long": 6,
+              "detail_short": 0
+            },
+            {
+              "name": "醒吾學校財團法人醒吾科技大學",
+              "value": 6,
+              "detail_long": 0,
+              "detail_short": 6
+            },
+            {
+              "name": "開南大學",
+              "value": 6,
+              "detail_long": 6,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中山大學",
+              "value": 5,
+              "detail_long": 5,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中正大學",
+              "value": 5,
+              "detail_long": 5,
+              "detail_short": 0
+            },
+            {
+              "name": "國立東華大學",
+              "value": 5,
+              "detail_long": 5,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺中教育大學",
+              "value": 5,
+              "detail_long": 5,
+              "detail_short": 0
+            },
+            {
+              "name": "嘉藥學校財團法人嘉南藥理大學",
+              "value": 4,
+              "detail_long": 4,
+              "detail_short": 0
+            },
+            {
+              "name": "國立彰化師範大學",
+              "value": 4,
+              "detail_long": 4,
+              "detail_short": 0
+            },
+            {
+              "name": "國立宜蘭大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺北科技大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺北護理健康大學",
+              "value": 3,
+              "detail_long": 1,
+              "detail_short": 2
+            },
+            {
+              "name": "國立臺南藝術大學",
+              "value": 3,
+              "detail_long": 2,
+              "detail_short": 1
+            },
+            {
+              "name": "國立臺東大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣海洋大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣科技大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "城市學校財團法人臺北城市科技大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "樹德科技大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "真理大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "長庚大學",
+              "value": 3,
+              "detail_long": 1,
+              "detail_short": 2
+            },
+            {
+              "name": "中國科技大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立暨南國際大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺北藝術大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣藝術大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立體育大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立高雄大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "東海大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "淡江大學學校財團法人淡江大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立勤益科技大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺北商業大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立金門大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "大同大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "實踐大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "景文科技大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "朝陽科技大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            }
+          ]
+        },
+        {
+          "name": "日本",
+          "children": [
+            {
+              "name": "淡江大學學校財團法人淡江大學",
+              "value": 83,
+              "detail_long": 83,
+              "detail_short": 0
+            },
+            {
+              "name": "國立政治大學",
+              "value": 78,
+              "detail_long": 78,
+              "detail_short": 0
+            },
+            {
+              "name": "東吳大學",
+              "value": 72,
+              "detail_long": 68,
+              "detail_short": 4
+            },
+            {
+              "name": "國立臺灣大學",
+              "value": 58,
+              "detail_long": 57,
+              "detail_short": 1
+            },
+            {
+              "name": "國立臺灣師範大學",
+              "value": 54,
+              "detail_long": 54,
+              "detail_short": 0
+            },
+            {
+              "name": "輔仁大學",
+              "value": 51,
+              "detail_long": 51,
+              "detail_short": 0
+            },
+            {
+              "name": "靜宜大學",
+              "value": 46,
+              "detail_long": 46,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中央大學",
+              "value": 45,
+              "detail_long": 22,
+              "detail_short": 23
+            },
+            {
+              "name": "文藻學校財團法人文藻外語大學",
+              "value": 37,
+              "detail_long": 37,
+              "detail_short": 0
+            },
+            {
+              "name": "中國文化大學",
+              "value": 35,
+              "detail_long": 35,
+              "detail_short": 0
+            },
+            {
+              "name": "國立成功大學",
+              "value": 31,
+              "detail_long": 30,
+              "detail_short": 1
+            },
+            {
+              "name": "實踐大學",
+              "value": 31,
+              "detail_long": 3,
+              "detail_short": 28
+            },
+            {
+              "name": "國立中山大學",
+              "value": 30,
+              "detail_long": 30,
+              "detail_short": 0
+            },
+            {
+              "name": "中華大學學校財團法人中華大學",
+              "value": 26,
+              "detail_long": 4,
+              "detail_short": 22
+            },
+            {
+              "name": "國立清華大學",
+              "value": 25,
+              "detail_long": 25,
+              "detail_short": 0
+            },
+            {
+              "name": "國立陽明交通大學",
+              "value": 24,
+              "detail_long": 0,
+              "detail_short": 24
+            },
+            {
+              "name": "國立高雄科技大學",
+              "value": 24,
+              "detail_long": 24,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺北教育大學",
+              "value": 23,
+              "detail_long": 13,
+              "detail_short": 10
+            },
+            {
+              "name": "東海大學",
+              "value": 23,
+              "detail_long": 23,
+              "detail_short": 0
+            },
+            {
+              "name": "臺北市立大學",
+              "value": 22,
+              "detail_long": 22,
+              "detail_short": 0
+            },
+            {
+              "name": "世新大學",
+              "value": 21,
+              "detail_long": 21,
+              "detail_short": 0
+            },
+            {
+              "name": "臺北醫學大學",
+              "value": 21,
+              "detail_long": 1,
+              "detail_short": 20
+            },
+            {
+              "name": "國立臺北大學",
+              "value": 20,
+              "detail_long": 20,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺北護理健康大學",
+              "value": 19,
+              "detail_long": 1,
+              "detail_short": 18
+            },
+            {
+              "name": "中原大學",
+              "value": 18,
+              "detail_long": 18,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺中科技大學",
+              "value": 18,
+              "detail_long": 18,
+              "detail_short": 0
+            },
+            {
+              "name": "馬偕學校財團法人馬偕醫護管理專科學校",
+              "value": 18,
+              "detail_long": 0,
+              "detail_short": 18
+            },
+            {
+              "name": "國立中興大學",
+              "value": 17,
+              "detail_long": 16,
+              "detail_short": 1
+            },
+            {
+              "name": "中華醫事科技大學",
+              "value": 16,
+              "detail_long": 0,
+              "detail_short": 16
+            },
+            {
+              "name": "國立臺北科技大學",
+              "value": 16,
+              "detail_long": 16,
+              "detail_short": 0
+            },
+            {
+              "name": "逢甲大學",
+              "value": 16,
+              "detail_long": 16,
+              "detail_short": 0
+            },
+            {
+              "name": "長庚大學",
+              "value": 16,
+              "detail_long": 8,
+              "detail_short": 8
+            },
+            {
+              "name": "城市學校財團法人臺北城市科技大學",
+              "value": 15,
+              "detail_long": 15,
+              "detail_short": 0
+            },
+            {
+              "name": "真理大學",
+              "value": 15,
+              "detail_long": 15,
+              "detail_short": 0
+            },
+            {
+              "name": "開南大學",
+              "value": 14,
+              "detail_long": 14,
+              "detail_short": 0
+            },
+            {
+              "name": "國立東華大學",
+              "value": 12,
+              "detail_long": 12,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣海洋大學",
+              "value": 12,
+              "detail_long": 12,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣科技大學",
+              "value": 12,
+              "detail_long": 12,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中正大學",
+              "value": 11,
+              "detail_long": 11,
+              "detail_short": 0
+            },
+            {
+              "name": "國立暨南國際大學",
+              "value": 11,
+              "detail_long": 11,
+              "detail_short": 0
+            },
+            {
+              "name": "義守大學",
+              "value": 11,
+              "detail_long": 11,
+              "detail_short": 0
+            },
+            {
+              "name": "國立高雄大學",
+              "value": 10,
+              "detail_long": 10,
+              "detail_short": 0
+            },
+            {
+              "name": "銘傳大學",
+              "value": 10,
+              "detail_long": 10,
+              "detail_short": 0
+            },
+            {
+              "name": "國立彰化師範大學",
+              "value": 9,
+              "detail_long": 9,
+              "detail_short": 0
+            },
+            {
+              "name": "樹人醫護管理專科學校",
+              "value": 9,
+              "detail_long": 9,
+              "detail_short": 0
+            },
+            {
+              "name": "長榮大學",
+              "value": 9,
+              "detail_long": 9,
+              "detail_short": 0
+            },
+            {
+              "name": "大同大學",
+              "value": 8,
+              "detail_long": 8,
+              "detail_short": 0
+            },
+            {
+              "name": "大葉大學",
+              "value": 8,
+              "detail_long": 8,
+              "detail_short": 0
+            },
+            {
+              "name": "國立宜蘭大學",
+              "value": 7,
+              "detail_long": 7,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣藝術大學",
+              "value": 7,
+              "detail_long": 7,
+              "detail_short": 0
+            },
+            {
+              "name": "元智大學",
+              "value": 6,
+              "detail_long": 6,
+              "detail_short": 0
+            },
+            {
+              "name": "國立嘉義大學",
+              "value": 6,
+              "detail_long": 5,
+              "detail_short": 1
+            },
+            {
+              "name": "國立聯合大學",
+              "value": 6,
+              "detail_long": 6,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺中教育大學",
+              "value": 6,
+              "detail_long": 6,
+              "detail_short": 0
+            },
+            {
+              "name": "正修學校財團法人正修科技大學",
+              "value": 6,
+              "detail_long": 0,
+              "detail_short": 6
+            },
+            {
+              "name": "國立臺南大學",
+              "value": 5,
+              "detail_long": 5,
+              "detail_short": 0
+            },
+            {
+              "name": "國立高雄師範大學",
+              "value": 5,
+              "detail_long": 5,
+              "detail_short": 0
+            },
+            {
+              "name": "中國醫藥大學",
+              "value": 4,
+              "detail_long": 4,
+              "detail_short": 0
+            },
+            {
+              "name": "南臺學校財團法人南臺科技大學",
+              "value": 4,
+              "detail_long": 4,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺東大學",
+              "value": 4,
+              "detail_long": 4,
+              "detail_short": 0
+            },
+            {
+              "name": "朝陽科技大學",
+              "value": 4,
+              "detail_long": 4,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺北藝術大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立雲林科技大學",
+              "value": 3,
+              "detail_long": 1,
+              "detail_short": 2
+            },
+            {
+              "name": "建國科技大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "中國科技大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "佛光大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "台南家專學校財團法人台南應用科技大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立勤益科技大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立澎湖科技大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺南藝術大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "德明財經科技大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "致理學校財團法人致理科技大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "龍華科技大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "中山醫學大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立虎尾科技大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立體育大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "廣亞學校財團法人育達科技大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "明新學校財團法人明新科技大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "景文科技大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            }
+          ]
+        },
+        {
+          "name": "澳大利亞",
+          "children": [
+            {
+              "name": "淡江大學學校財團法人淡江大學",
+              "value": 31,
+              "detail_long": 31,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺北護理健康大學",
+              "value": 14,
+              "detail_long": 10,
+              "detail_short": 4
+            },
+            {
+              "name": "國立臺灣大學",
+              "value": 12,
+              "detail_long": 12,
+              "detail_short": 0
+            },
+            {
+              "name": "東吳大學",
+              "value": 5,
+              "detail_long": 4,
+              "detail_short": 1
+            },
+            {
+              "name": "國立政治大學",
+              "value": 4,
+              "detail_long": 4,
+              "detail_short": 0
+            },
+            {
+              "name": "國立高雄餐旅大學",
+              "value": 4,
+              "detail_long": 4,
+              "detail_short": 0
+            },
+            {
+              "name": "臺北醫學大學",
+              "value": 2,
+              "detail_long": 0,
+              "detail_short": 2
+            },
+            {
+              "name": "元智大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中央大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中山大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立屏東大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立成功大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立清華大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "實踐大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "德明財經科技大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "靜宜大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            }
+          ]
+        },
+        {
+          "name": "紐西蘭",
+          "children": [
+            {
+              "name": "長庚大學",
+              "value": 11,
+              "detail_long": 0,
+              "detail_short": 11
+            },
+            {
+              "name": "靜宜大學",
+              "value": 9,
+              "detail_long": 0,
+              "detail_short": 9
+            },
+            {
+              "name": "國立臺灣大學",
+              "value": 4,
+              "detail_long": 4,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺北護理健康大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            }
+          ]
+        },
+        {
+          "name": "阿富汗伊斯蘭共和國",
+          "children": [
+            {
+              "name": "龍華科技大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            }
+          ]
+        },
+        {
+          "name": "阿拉伯聯合大公國",
+          "children": [
+            {
+              "name": "長庚大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "北美洲",
+      "children": [
+        {
+          "name": "加拿大",
+          "children": [
+            {
+              "name": "國立中央大學",
+              "value": 14,
+              "detail_long": 2,
+              "detail_short": 12
+            },
+            {
+              "name": "靜宜大學",
+              "value": 9,
+              "detail_long": 1,
+              "detail_short": 8
+            },
+            {
+              "name": "國立政治大學",
+              "value": 7,
+              "detail_long": 7,
+              "detail_short": 0
+            },
+            {
+              "name": "國立高雄餐旅大學",
+              "value": 7,
+              "detail_long": 7,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣師範大學",
+              "value": 6,
+              "detail_long": 6,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣大學",
+              "value": 5,
+              "detail_long": 5,
+              "detail_short": 0
+            },
+            {
+              "name": "國立暨南國際大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立清華大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "元智大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中山大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立嘉義大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立彰化師範大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立陽明交通大學",
+              "value": 1,
+              "detail_long": 0,
+              "detail_short": 1
+            },
+            {
+              "name": "國立雲林科技大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立高雄科技大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "弘光科技大學",
+              "value": 1,
+              "detail_long": 0,
+              "detail_short": 1
+            },
+            {
+              "name": "文藻學校財團法人文藻外語大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "樹德科技大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "淡江大學學校財團法人淡江大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "義守大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "華梵學校財團法人華梵大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "輔仁大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            }
+          ]
+        },
+        {
+          "name": "美國",
+          "children": [
+            {
+              "name": "淡江大學學校財團法人淡江大學",
+              "value": 54,
+              "detail_long": 54,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣大學",
+              "value": 33,
+              "detail_long": 33,
+              "detail_short": 0
+            },
+            {
+              "name": "臺北醫學大學",
+              "value": 26,
+              "detail_long": 0,
+              "detail_short": 26
+            },
+            {
+              "name": "國立政治大學",
+              "value": 21,
+              "detail_long": 21,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中央大學",
+              "value": 15,
+              "detail_long": 9,
+              "detail_short": 6
+            },
+            {
+              "name": "長庚學校財團法人長庚科技大學",
+              "value": 15,
+              "detail_long": 0,
+              "detail_short": 15
+            },
+            {
+              "name": "國立臺北護理健康大學",
+              "value": 12,
+              "detail_long": 0,
+              "detail_short": 12
+            },
+            {
+              "name": "輔仁大學",
+              "value": 12,
+              "detail_long": 12,
+              "detail_short": 0
+            },
+            {
+              "name": "中原大學",
+              "value": 11,
+              "detail_long": 11,
+              "detail_short": 0
+            },
+            {
+              "name": "長庚大學",
+              "value": 11,
+              "detail_long": 2,
+              "detail_short": 9
+            },
+            {
+              "name": "逢甲大學",
+              "value": 7,
+              "detail_long": 7,
+              "detail_short": 0
+            },
+            {
+              "name": "世新大學",
+              "value": 6,
+              "detail_long": 6,
+              "detail_short": 0
+            },
+            {
+              "name": "中華醫事科技大學",
+              "value": 6,
+              "detail_long": 0,
+              "detail_short": 6
+            },
+            {
+              "name": "佛光大學",
+              "value": 6,
+              "detail_long": 6,
+              "detail_short": 0
+            },
+            {
+              "name": "國立彰化師範大學",
+              "value": 6,
+              "detail_long": 6,
+              "detail_short": 0
+            },
+            {
+              "name": "國立清華大學",
+              "value": 6,
+              "detail_long": 6,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣師範大學",
+              "value": 6,
+              "detail_long": 6,
+              "detail_short": 0
+            },
+            {
+              "name": "東吳大學",
+              "value": 6,
+              "detail_long": 4,
+              "detail_short": 2
+            },
+            {
+              "name": "臺北市立大學",
+              "value": 6,
+              "detail_long": 6,
+              "detail_short": 0
+            },
+            {
+              "name": "國立虎尾科技大學",
+              "value": 5,
+              "detail_long": 5,
+              "detail_short": 0
+            },
+            {
+              "name": "國立陽明交通大學",
+              "value": 5,
+              "detail_long": 0,
+              "detail_short": 5
+            },
+            {
+              "name": "實踐大學",
+              "value": 5,
+              "detail_long": 5,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中山大學",
+              "value": 4,
+              "detail_long": 4,
+              "detail_short": 0
+            },
+            {
+              "name": "文藻學校財團法人文藻外語大學",
+              "value": 4,
+              "detail_long": 4,
+              "detail_short": 0
+            },
+            {
+              "name": "中山醫學大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺東大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣海洋大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立高雄科技大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "東海大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "銘傳大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "中國文化大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "中國醫藥大學",
+              "value": 2,
+              "detail_long": 0,
+              "detail_short": 2
+            },
+            {
+              "name": "國立中興大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立成功大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺北大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣科技大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立雲林科技大學",
+              "value": 2,
+              "detail_long": 0,
+              "detail_short": 2
+            },
+            {
+              "name": "弘光科技大學",
+              "value": 2,
+              "detail_long": 0,
+              "detail_short": 2
+            },
+            {
+              "name": "南華大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中正大學",
+              "value": 1,
+              "detail_long": 0,
+              "detail_short": 1
+            },
+            {
+              "name": "國立屏東大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺北教育大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺南大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "大同大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "法鼓學校財團法人法鼓文理學院",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "華梵學校財團法人華梵大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "長榮大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "龍華科技大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "大陸地區",
+      "children": [
+        {
+          "name": "大陸地區",
+          "children": [
+            {
+              "name": "中華大學學校財團法人中華大學",
+              "value": 49,
+              "detail_long": 0,
+              "detail_short": 49
+            },
+            {
+              "name": "銘傳大學",
+              "value": 44,
+              "detail_long": 44,
+              "detail_short": 0
+            },
+            {
+              "name": "國立政治大學",
+              "value": 39,
+              "detail_long": 39,
+              "detail_short": 0
+            },
+            {
+              "name": "中國文化大學",
+              "value": 32,
+              "detail_long": 32,
+              "detail_short": 0
+            },
+            {
+              "name": "逢甲大學",
+              "value": 28,
+              "detail_long": 28,
+              "detail_short": 0
+            },
+            {
+              "name": "世新大學",
+              "value": 26,
+              "detail_long": 26,
+              "detail_short": 0
+            },
+            {
+              "name": "東吳大學",
+              "value": 26,
+              "detail_long": 19,
+              "detail_short": 7
+            },
+            {
+              "name": "國立臺灣師範大學",
+              "value": 24,
+              "detail_long": 24,
+              "detail_short": 0
+            },
+            {
+              "name": "國立金門大學",
+              "value": 23,
+              "detail_long": 23,
+              "detail_short": 0
+            },
+            {
+              "name": "國立清華大學",
+              "value": 21,
+              "detail_long": 14,
+              "detail_short": 7
+            },
+            {
+              "name": "實踐大學",
+              "value": 17,
+              "detail_long": 7,
+              "detail_short": 10
+            },
+            {
+              "name": "中原大學",
+              "value": 16,
+              "detail_long": 16,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣大學",
+              "value": 15,
+              "detail_long": 15,
+              "detail_short": 0
+            },
+            {
+              "name": "國立陽明交通大學",
+              "value": 15,
+              "detail_long": 0,
+              "detail_short": 15
+            },
+            {
+              "name": "輔仁大學",
+              "value": 15,
+              "detail_long": 15,
+              "detail_short": 0
+            },
+            {
+              "name": "東海大學",
+              "value": 13,
+              "detail_long": 13,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中山大學",
+              "value": 12,
+              "detail_long": 12,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中興大學",
+              "value": 12,
+              "detail_long": 12,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺北大學",
+              "value": 11,
+              "detail_long": 9,
+              "detail_short": 2
+            },
+            {
+              "name": "義守大學",
+              "value": 11,
+              "detail_long": 11,
+              "detail_short": 0
+            },
+            {
+              "name": "佛光大學",
+              "value": 10,
+              "detail_long": 10,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣藝術大學",
+              "value": 10,
+              "detail_long": 10,
+              "detail_short": 0
+            },
+            {
+              "name": "淡江大學學校財團法人淡江大學",
+              "value": 10,
+              "detail_long": 10,
+              "detail_short": 0
+            },
+            {
+              "name": "臺北市立大學",
+              "value": 10,
+              "detail_long": 10,
+              "detail_short": 0
+            },
+            {
+              "name": "國立東華大學",
+              "value": 9,
+              "detail_long": 9,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺北商業大學",
+              "value": 8,
+              "detail_long": 8,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中央大學",
+              "value": 7,
+              "detail_long": 7,
+              "detail_short": 0
+            },
+            {
+              "name": "南華大學",
+              "value": 6,
+              "detail_long": 6,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中正大學",
+              "value": 6,
+              "detail_long": 6,
+              "detail_short": 0
+            },
+            {
+              "name": "國立高雄科技大學",
+              "value": 6,
+              "detail_long": 6,
+              "detail_short": 0
+            },
+            {
+              "name": "元智大學",
+              "value": 5,
+              "detail_long": 5,
+              "detail_short": 0
+            },
+            {
+              "name": "文藻學校財團法人文藻外語大學",
+              "value": 5,
+              "detail_long": 5,
+              "detail_short": 0
+            },
+            {
+              "name": "靜宜大學",
+              "value": 5,
+              "detail_long": 5,
+              "detail_short": 0
+            },
+            {
+              "name": "國立高雄大學",
+              "value": 4,
+              "detail_long": 4,
+              "detail_short": 0
+            },
+            {
+              "name": "玄奘大學",
+              "value": 4,
+              "detail_long": 4,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺中科技大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺北藝術大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺南藝術大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣海洋大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣科技大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣體育運動大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立雲林科技大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "華梵學校財團法人華梵大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "長庚大學",
+              "value": 3,
+              "detail_long": 0,
+              "detail_short": 3
+            },
+            {
+              "name": "國立彰化師範大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立成功大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立體育大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "大華學校財團法人敏實科技大學",
+              "value": 2,
+              "detail_long": 0,
+              "detail_short": 2
+            },
+            {
+              "name": "僑光科技大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立嘉義大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立暨南國際大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺北教育大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺東大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立高雄師範大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "崑山科技大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "長榮大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "東協",
+      "children": [
+        {
+          "name": "印度尼西亞共和國",
+          "children": [
+            {
+              "name": "國立臺北護理健康大學",
+              "value": 5,
+              "detail_long": 0,
+              "detail_short": 5
+            },
+            {
+              "name": "國立政治大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "大同大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "淡江大學學校財團法人淡江大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            }
+          ]
+        },
+        {
+          "name": "新加坡共和國",
+          "children": [
+            {
+              "name": "國立陽明交通大學",
+              "value": 13,
+              "detail_long": 0,
+              "detail_short": 13
+            },
+            {
+              "name": "國立臺灣大學",
+              "value": 9,
+              "detail_long": 9,
+              "detail_short": 0
+            },
+            {
+              "name": "國立成功大學",
+              "value": 7,
+              "detail_long": 3,
+              "detail_short": 4
+            },
+            {
+              "name": "國立政治大學",
+              "value": 6,
+              "detail_long": 6,
+              "detail_short": 0
+            },
+            {
+              "name": "國立清華大學",
+              "value": 6,
+              "detail_long": 6,
+              "detail_short": 0
+            },
+            {
+              "name": "長庚大學",
+              "value": 6,
+              "detail_long": 0,
+              "detail_short": 6
+            },
+            {
+              "name": "國立臺灣科技大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中央大學",
+              "value": 2,
+              "detail_long": 1,
+              "detail_short": 1
+            },
+            {
+              "name": "國立中山大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "臺北市立大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "實踐大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "輔仁大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            }
+          ]
+        },
+        {
+          "name": "泰國",
+          "children": [
+            {
+              "name": "實踐大學",
+              "value": 32,
+              "detail_long": 0,
+              "detail_short": 32
+            },
+            {
+              "name": "東海大學",
+              "value": 10,
+              "detail_long": 0,
+              "detail_short": 10
+            },
+            {
+              "name": "國立成功大學",
+              "value": 5,
+              "detail_long": 1,
+              "detail_short": 4
+            },
+            {
+              "name": "國立彰化師範大學",
+              "value": 4,
+              "detail_long": 0,
+              "detail_short": 4
+            },
+            {
+              "name": "國立政治大學",
+              "value": 4,
+              "detail_long": 4,
+              "detail_short": 0
+            },
+            {
+              "name": "國立高雄科技大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立聯合大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺北大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "長庚大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "靜宜大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "中國文化大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中山大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中興大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣師範大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣科技大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立高雄餐旅大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "慈濟學校財團法人慈濟大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "長榮大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            }
+          ]
+        },
+        {
+          "name": "菲律賓共和國",
+          "children": [
+            {
+              "name": "樹德科技大學",
+              "value": 34,
+              "detail_long": 0,
+              "detail_short": 34
+            },
+            {
+              "name": "國立臺北護理健康大學",
+              "value": 3,
+              "detail_long": 0,
+              "detail_short": 3
+            },
+            {
+              "name": "國立臺灣科技大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            }
+          ]
+        },
+        {
+          "name": "越南社會主義共和國",
+          "children": [
+            {
+              "name": "國立中山大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立政治大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立高雄大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "文藻學校財團法人文藻外語大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "長榮大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            }
+          ]
+        },
+        {
+          "name": "馬來西亞",
+          "children": [
+            {
+              "name": "中華大學學校財團法人中華大學",
+              "value": 21,
+              "detail_long": 0,
+              "detail_short": 21
+            },
+            {
+              "name": "實踐大學",
+              "value": 20,
+              "detail_long": 0,
+              "detail_short": 20
+            },
+            {
+              "name": "國立聯合大學",
+              "value": 13,
+              "detail_long": 1,
+              "detail_short": 12
+            },
+            {
+              "name": "樹德科技大學",
+              "value": 10,
+              "detail_long": 0,
+              "detail_short": 10
+            },
+            {
+              "name": "國立臺北護理健康大學",
+              "value": 6,
+              "detail_long": 0,
+              "detail_short": 6
+            },
+            {
+              "name": "弘光科技大學",
+              "value": 4,
+              "detail_long": 4,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣海洋大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中央大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立宜蘭大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立政治大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立金門大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立陽明交通大學",
+              "value": 1,
+              "detail_long": 0,
+              "detail_short": 1
+            },
+            {
+              "name": "國立高雄科技大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "逢甲大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "歐洲",
+      "children": [
+        {
+          "name": "丹麥王國",
+          "children": [
+            {
+              "name": "國立臺灣大學",
+              "value": 6,
+              "detail_long": 6,
+              "detail_short": 0
+            },
+            {
+              "name": "國立陽明交通大學",
+              "value": 5,
+              "detail_long": 0,
+              "detail_short": 5
+            },
+            {
+              "name": "國立政治大學",
+              "value": 4,
+              "detail_long": 4,
+              "detail_short": 0
+            },
+            {
+              "name": "國立成功大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "東吳大學",
+              "value": 2,
+              "detail_long": 0,
+              "detail_short": 2
+            },
+            {
+              "name": "國立中山大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "靜宜大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            }
+          ]
+        },
+        {
+          "name": "保加利亞共和國",
+          "children": [
+            {
+              "name": "中國醫藥大學",
+              "value": 1,
+              "detail_long": 0,
+              "detail_short": 1
+            }
+          ]
+        },
+        {
+          "name": "克羅埃西亞共和國",
+          "children": [
+            {
+              "name": "國立中山大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            }
+          ]
+        },
+        {
+          "name": "冰島共和國",
+          "children": [
+            {
+              "name": "國立臺灣大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            }
+          ]
+        },
+        {
+          "name": "匈牙利共和國",
+          "children": [
+            {
+              "name": "國立臺灣大學",
+              "value": 4,
+              "detail_long": 4,
+              "detail_short": 0
+            },
+            {
+              "name": "東海大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立虎尾科技大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "文藻學校財團法人文藻外語大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "東吳大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "淡江大學學校財團法人淡江大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "逢甲大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "靜宜大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "中國醫藥大學",
+              "value": 1,
+              "detail_long": 0,
+              "detail_short": 1
+            },
+            {
+              "name": "國立政治大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣師範大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣科技大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣藝術大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立陽明交通大學",
+              "value": 1,
+              "detail_long": 0,
+              "detail_short": 1
+            }
+          ]
+        },
+        {
+          "name": "奧地利共和國",
+          "children": [
+            {
+              "name": "國立政治大學",
+              "value": 8,
+              "detail_long": 8,
+              "detail_short": 0
+            },
+            {
+              "name": "國立高雄科技大學",
+              "value": 8,
+              "detail_long": 7,
+              "detail_short": 1
+            },
+            {
+              "name": "國立臺北科技大學",
+              "value": 6,
+              "detail_long": 6,
+              "detail_short": 0
+            },
+            {
+              "name": "國立成功大學",
+              "value": 4,
+              "detail_long": 4,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺北大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣科技大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "南臺學校財團法人南臺科技大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中央大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中興大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立暨南國際大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺北教育大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "銘傳大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中山大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立清華大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺北藝術大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣師範大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立陽明交通大學",
+              "value": 1,
+              "detail_long": 0,
+              "detail_short": 1
+            },
+            {
+              "name": "國立高雄大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "崑山科技大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "文藻學校財團法人文藻外語大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "輔仁大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "開南大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "靜宜大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            }
+          ]
+        },
+        {
+          "name": "德意志聯邦共和國",
+          "children": [
+            {
+              "name": "國立陽明交通大學",
+              "value": 38,
+              "detail_long": 0,
+              "detail_short": 38
+            },
+            {
+              "name": "國立中山大學",
+              "value": 34,
+              "detail_long": 34,
+              "detail_short": 0
+            },
+            {
+              "name": "國立政治大學",
+              "value": 34,
+              "detail_long": 34,
+              "detail_short": 0
+            },
+            {
+              "name": "東吳大學",
+              "value": 34,
+              "detail_long": 34,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣科技大學",
+              "value": 30,
+              "detail_long": 30,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣大學",
+              "value": 28,
+              "detail_long": 28,
+              "detail_short": 0
+            },
+            {
+              "name": "國立高雄科技大學",
+              "value": 24,
+              "detail_long": 23,
+              "detail_short": 1
+            },
+            {
+              "name": "國立中央大學",
+              "value": 21,
+              "detail_long": 16,
+              "detail_short": 5
+            },
+            {
+              "name": "國立臺北科技大學",
+              "value": 20,
+              "detail_long": 20,
+              "detail_short": 0
+            },
+            {
+              "name": "國立清華大學",
+              "value": 19,
+              "detail_long": 19,
+              "detail_short": 0
+            },
+            {
+              "name": "國立成功大學",
+              "value": 16,
+              "detail_long": 16,
+              "detail_short": 0
+            },
+            {
+              "name": "國立雲林科技大學",
+              "value": 16,
+              "detail_long": 13,
+              "detail_short": 3
+            },
+            {
+              "name": "淡江大學學校財團法人淡江大學",
+              "value": 14,
+              "detail_long": 14,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中正大學",
+              "value": 13,
+              "detail_long": 13,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中興大學",
+              "value": 13,
+              "detail_long": 13,
+              "detail_short": 0
+            },
+            {
+              "name": "國立東華大學",
+              "value": 12,
+              "detail_long": 12,
+              "detail_short": 0
+            },
+            {
+              "name": "靜宜大學",
+              "value": 11,
+              "detail_long": 11,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣師範大學",
+              "value": 10,
+              "detail_long": 10,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺北大學",
+              "value": 9,
+              "detail_long": 9,
+              "detail_short": 0
+            },
+            {
+              "name": "輔仁大學",
+              "value": 9,
+              "detail_long": 9,
+              "detail_short": 0
+            },
+            {
+              "name": "逢甲大學",
+              "value": 8,
+              "detail_long": 8,
+              "detail_short": 0
+            },
+            {
+              "name": "國立彰化師範大學",
+              "value": 7,
+              "detail_long": 7,
+              "detail_short": 0
+            },
+            {
+              "name": "中原大學",
+              "value": 6,
+              "detail_long": 6,
+              "detail_short": 0
+            },
+            {
+              "name": "銘傳大學",
+              "value": 6,
+              "detail_long": 6,
+              "detail_short": 0
+            },
+            {
+              "name": "元智大學",
+              "value": 5,
+              "detail_long": 5,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣海洋大學",
+              "value": 5,
+              "detail_long": 5,
+              "detail_short": 0
+            },
+            {
+              "name": "實踐大學",
+              "value": 5,
+              "detail_long": 5,
+              "detail_short": 0
+            },
+            {
+              "name": "國立暨南國際大學",
+              "value": 4,
+              "detail_long": 4,
+              "detail_short": 0
+            },
+            {
+              "name": "國立虎尾科技大學",
+              "value": 4,
+              "detail_long": 4,
+              "detail_short": 0
+            },
+            {
+              "name": "文藻學校財團法人文藻外語大學",
+              "value": 4,
+              "detail_long": 4,
+              "detail_short": 0
+            },
+            {
+              "name": "光宇學校財團法人元培醫事科技大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺北教育大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立高雄大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "朝陽科技大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "東海大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "世新大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "中國文化大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立體育大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "臺北市立大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "長庚大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "南臺學校財團法人南臺科技大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立勤益科技大學",
+              "value": 1,
+              "detail_long": 0,
+              "detail_short": 1
+            },
+            {
+              "name": "國立臺北商業大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺北藝術大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣藝術大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立高雄師範大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "大同大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            }
+          ]
+        },
+        {
+          "name": "愛沙尼亞共和國",
+          "children": [
+            {
+              "name": "中國醫藥大學",
+              "value": 1,
+              "detail_long": 0,
+              "detail_short": 1
+            },
+            {
+              "name": "國立臺北科技大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            }
+          ]
+        },
+        {
+          "name": "愛爾蘭共和國",
+          "children": [
+            {
+              "name": "國立成功大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            }
+          ]
+        },
+        {
+          "name": "拉脫維亞共和國",
+          "children": [
+            {
+              "name": "世新大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中山大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立政治大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "淡江大學學校財團法人淡江大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            }
+          ]
+        },
+        {
+          "name": "挪威王國",
+          "children": [
+            {
+              "name": "國立中山大學",
+              "value": 4,
+              "detail_long": 4,
+              "detail_short": 0
+            },
+            {
+              "name": "國立政治大學",
+              "value": 4,
+              "detail_long": 4,
+              "detail_short": 0
+            },
+            {
+              "name": "國立清華大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣師範大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣藝術大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "長庚大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            }
+          ]
+        },
+        {
+          "name": "捷克共和國",
+          "children": [
+            {
+              "name": "國立屏東大學",
+              "value": 47,
+              "detail_long": 2,
+              "detail_short": 45
+            },
+            {
+              "name": "國立清華大學",
+              "value": 17,
+              "detail_long": 17,
+              "detail_short": 0
+            },
+            {
+              "name": "長榮大學",
+              "value": 16,
+              "detail_long": 6,
+              "detail_short": 10
+            },
+            {
+              "name": "國立陽明交通大學",
+              "value": 12,
+              "detail_long": 0,
+              "detail_short": 12
+            },
+            {
+              "name": "國立臺北科技大學",
+              "value": 11,
+              "detail_long": 11,
+              "detail_short": 0
+            },
+            {
+              "name": "國立成功大學",
+              "value": 10,
+              "detail_long": 10,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣科技大學",
+              "value": 9,
+              "detail_long": 9,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中央大學",
+              "value": 8,
+              "detail_long": 8,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中山大學",
+              "value": 6,
+              "detail_long": 6,
+              "detail_short": 0
+            },
+            {
+              "name": "國立勤益科技大學",
+              "value": 6,
+              "detail_long": 2,
+              "detail_short": 4
+            },
+            {
+              "name": "國立彰化師範大學",
+              "value": 6,
+              "detail_long": 6,
+              "detail_short": 0
+            },
+            {
+              "name": "淡江大學學校財團法人淡江大學",
+              "value": 6,
+              "detail_long": 6,
+              "detail_short": 0
+            },
+            {
+              "name": "元智大學",
+              "value": 5,
+              "detail_long": 5,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中興大學",
+              "value": 5,
+              "detail_long": 5,
+              "detail_short": 0
+            },
+            {
+              "name": "國立政治大學",
+              "value": 5,
+              "detail_long": 5,
+              "detail_short": 0
+            },
+            {
+              "name": "世新大學",
+              "value": 4,
+              "detail_long": 4,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中正大學",
+              "value": 4,
+              "detail_long": 4,
+              "detail_short": 0
+            },
+            {
+              "name": "國立嘉義大學",
+              "value": 4,
+              "detail_long": 4,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺北大學",
+              "value": 4,
+              "detail_long": 4,
+              "detail_short": 0
+            },
+            {
+              "name": "東吳大學",
+              "value": 4,
+              "detail_long": 4,
+              "detail_short": 0
+            },
+            {
+              "name": "東海大學",
+              "value": 4,
+              "detail_long": 4,
+              "detail_short": 0
+            },
+            {
+              "name": "靜宜大學",
+              "value": 4,
+              "detail_long": 4,
+              "detail_short": 0
+            },
+            {
+              "name": "亞洲大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺北藝術大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "臺北市立大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立暨南國際大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立東華大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣師範大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣藝術大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "輔仁大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "逢甲大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺北教育大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "文藻學校財團法人文藻外語大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "長庚大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            }
+          ]
+        },
+        {
+          "name": "斯洛伐克共和國",
+          "children": [
+            {
+              "name": "臺北市立大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中山大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            }
+          ]
+        },
+        {
+          "name": "斯洛維尼亞共和國",
+          "children": [
+            {
+              "name": "國立政治大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立清華大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "淡江大學學校財團法人淡江大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "臺北市立大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "輔仁大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            }
+          ]
+        },
+        {
+          "name": "比利時王國",
+          "children": [
+            {
+              "name": "國立陽明交通大學",
+              "value": 7,
+              "detail_long": 0,
+              "detail_short": 7
+            },
+            {
+              "name": "國立中山大學",
+              "value": 6,
+              "detail_long": 6,
+              "detail_short": 0
+            },
+            {
+              "name": "國立政治大學",
+              "value": 6,
+              "detail_long": 6,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中央大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立成功大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣科技大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "淡江大學學校財團法人淡江大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "輔仁大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "中國文化大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立清華大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺北大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "東海大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "逢甲大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "銘傳大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            }
+          ]
+        },
+        {
+          "name": "法國",
+          "children": [
+            {
+              "name": "國立政治大學",
+              "value": 54,
+              "detail_long": 54,
+              "detail_short": 0
+            },
+            {
+              "name": "輔仁大學",
+              "value": 30,
+              "detail_long": 30,
+              "detail_short": 0
+            },
+            {
+              "name": "淡江大學學校財團法人淡江大學",
+              "value": 24,
+              "detail_long": 24,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中山大學",
+              "value": 23,
+              "detail_long": 23,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中央大學",
+              "value": 22,
+              "detail_long": 22,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣大學",
+              "value": 18,
+              "detail_long": 18,
+              "detail_short": 0
+            },
+            {
+              "name": "國立陽明交通大學",
+              "value": 16,
+              "detail_long": 0,
+              "detail_short": 16
+            },
+            {
+              "name": "文藻學校財團法人文藻外語大學",
+              "value": 16,
+              "detail_long": 6,
+              "detail_short": 10
+            },
+            {
+              "name": "國立成功大學",
+              "value": 12,
+              "detail_long": 12,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺北大學",
+              "value": 12,
+              "detail_long": 12,
+              "detail_short": 0
+            },
+            {
+              "name": "中國文化大學",
+              "value": 10,
+              "detail_long": 10,
+              "detail_short": 0
+            },
+            {
+              "name": "東吳大學",
+              "value": 10,
+              "detail_long": 10,
+              "detail_short": 0
+            },
+            {
+              "name": "長庚大學",
+              "value": 10,
+              "detail_long": 10,
+              "detail_short": 0
+            },
+            {
+              "name": "世新大學",
+              "value": 8,
+              "detail_long": 8,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣師範大學",
+              "value": 7,
+              "detail_long": 7,
+              "detail_short": 0
+            },
+            {
+              "name": "逢甲大學",
+              "value": 7,
+              "detail_long": 7,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中興大學",
+              "value": 6,
+              "detail_long": 6,
+              "detail_short": 0
+            },
+            {
+              "name": "靜宜大學",
+              "value": 6,
+              "detail_long": 5,
+              "detail_short": 1
+            },
+            {
+              "name": "國立清華大學",
+              "value": 4,
+              "detail_long": 4,
+              "detail_short": 0
+            },
+            {
+              "name": "國立高雄科技大學",
+              "value": 4,
+              "detail_long": 2,
+              "detail_short": 2
+            },
+            {
+              "name": "銘傳大學",
+              "value": 4,
+              "detail_long": 4,
+              "detail_short": 0
+            },
+            {
+              "name": "中原大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中正大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立暨南國際大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣科技大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "義守大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺北教育大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺北藝術大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣藝術大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立雲林科技大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "實踐大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "東海大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "元智大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺中教育大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺南大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "臺北市立大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "長榮大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            }
+          ]
+        },
+        {
+          "name": "波蘭共和國",
+          "children": [
+            {
+              "name": "淡江大學學校財團法人淡江大學",
+              "value": 15,
+              "detail_long": 15,
+              "detail_short": 0
+            },
+            {
+              "name": "國立政治大學",
+              "value": 4,
+              "detail_long": 4,
+              "detail_short": 0
+            },
+            {
+              "name": "世新大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中山大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立宜蘭大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立清華大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺北大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立陽明交通大學",
+              "value": 3,
+              "detail_long": 0,
+              "detail_short": 3
+            },
+            {
+              "name": "國立成功大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立東華大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "大華學校財團法人敏實科技大學",
+              "value": 2,
+              "detail_long": 0,
+              "detail_short": 2
+            },
+            {
+              "name": "文藻學校財團法人文藻外語大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "東吳大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "銘傳大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中興大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "明志科技大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            }
+          ]
+        },
+        {
+          "name": "瑞典王國",
+          "children": [
+            {
+              "name": "國立陽明交通大學",
+              "value": 19,
+              "detail_long": 0,
+              "detail_short": 19
+            },
+            {
+              "name": "國立臺灣大學",
+              "value": 13,
+              "detail_long": 13,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中央大學",
+              "value": 11,
+              "detail_long": 3,
+              "detail_short": 8
+            },
+            {
+              "name": "國立中山大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣科技大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "淡江大學學校財團法人淡江大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "靜宜大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "元智大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中興大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立成功大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立政治大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立清華大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺北大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺北科技大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "輔仁大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "銘傳大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            }
+          ]
+        },
+        {
+          "name": "瑞士聯邦",
+          "children": [
+            {
+              "name": "國立政治大學",
+              "value": 5,
+              "detail_long": 5,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣大學",
+              "value": 4,
+              "detail_long": 4,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中央大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺北教育大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中正大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立清華大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣師範大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣科技大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "實踐大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "長榮大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            }
+          ]
+        },
+        {
+          "name": "立陶宛共和國",
+          "children": [
+            {
+              "name": "國立中山大學",
+              "value": 7,
+              "detail_long": 7,
+              "detail_short": 0
+            },
+            {
+              "name": "國立東華大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立政治大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺北護理健康大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣科技大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "文藻學校財團法人文藻外語大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立嘉義大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立成功大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立清華大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣師範大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立陽明交通大學",
+              "value": 1,
+              "detail_long": 0,
+              "detail_short": 1
+            },
+            {
+              "name": "東海大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "義守大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            }
+          ]
+        },
+        {
+          "name": "義大利共和國",
+          "children": [
+            {
+              "name": "國立中山大學",
+              "value": 6,
+              "detail_long": 6,
+              "detail_short": 0
+            },
+            {
+              "name": "世新大學",
+              "value": 4,
+              "detail_long": 4,
+              "detail_short": 0
+            },
+            {
+              "name": "國立政治大學",
+              "value": 4,
+              "detail_long": 4,
+              "detail_short": 0
+            },
+            {
+              "name": "臺北市立大學",
+              "value": 4,
+              "detail_long": 4,
+              "detail_short": 0
+            },
+            {
+              "name": "輔仁大學",
+              "value": 4,
+              "detail_long": 4,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中興大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立清華大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺北藝術大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣科技大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立高雄科技大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "東海大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "淡江大學學校財團法人淡江大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中央大學",
+              "value": 1,
+              "detail_long": 0,
+              "detail_short": 1
+            },
+            {
+              "name": "國立臺北科技大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "實踐大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "東吳大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "靜宜大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            }
+          ]
+        },
+        {
+          "name": "芬蘭共和國",
+          "children": [
+            {
+              "name": "國立臺灣科技大學",
+              "value": 6,
+              "detail_long": 5,
+              "detail_short": 1
+            },
+            {
+              "name": "國立臺灣大學",
+              "value": 5,
+              "detail_long": 5,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中興大學",
+              "value": 4,
+              "detail_long": 4,
+              "detail_short": 0
+            },
+            {
+              "name": "國立成功大學",
+              "value": 4,
+              "detail_long": 4,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣師範大學",
+              "value": 4,
+              "detail_long": 4,
+              "detail_short": 0
+            },
+            {
+              "name": "淡江大學學校財團法人淡江大學",
+              "value": 4,
+              "detail_long": 4,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中山大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立政治大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中央大學",
+              "value": 2,
+              "detail_long": 1,
+              "detail_short": 1
+            },
+            {
+              "name": "國立清華大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "大同大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺北藝術大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立高雄大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "逢甲大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "靜宜大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            }
+          ]
+        },
+        {
+          "name": "英國",
+          "children": [
+            {
+              "name": "國立臺灣大學",
+              "value": 17,
+              "detail_long": 17,
+              "detail_short": 0
+            },
+            {
+              "name": "國立政治大學",
+              "value": 15,
+              "detail_long": 15,
+              "detail_short": 0
+            },
+            {
+              "name": "實踐大學",
+              "value": 14,
+              "detail_long": 0,
+              "detail_short": 14
+            },
+            {
+              "name": "國立臺灣師範大學",
+              "value": 12,
+              "detail_long": 12,
+              "detail_short": 0
+            },
+            {
+              "name": "淡江大學學校財團法人淡江大學",
+              "value": 10,
+              "detail_long": 10,
+              "detail_short": 0
+            },
+            {
+              "name": "國立成功大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立清華大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺北大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "東海大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "文藻學校財團法人文藻外語大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "靜宜大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "中國文化大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "中華大學學校財團法人中華大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣藝術大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣體育運動大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立陽明交通大學",
+              "value": 1,
+              "detail_long": 0,
+              "detail_short": 1
+            },
+            {
+              "name": "國立高雄科技大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "東吳大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "輔仁大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "逢甲大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            }
+          ]
+        },
+        {
+          "name": "荷蘭王國",
+          "children": [
+            {
+              "name": "國立臺灣大學",
+              "value": 26,
+              "detail_long": 26,
+              "detail_short": 0
+            },
+            {
+              "name": "國立政治大學",
+              "value": 15,
+              "detail_long": 15,
+              "detail_short": 0
+            },
+            {
+              "name": "東吳大學",
+              "value": 9,
+              "detail_long": 9,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺北科技大學",
+              "value": 8,
+              "detail_long": 8,
+              "detail_short": 0
+            },
+            {
+              "name": "逢甲大學",
+              "value": 8,
+              "detail_long": 8,
+              "detail_short": 0
+            },
+            {
+              "name": "國立成功大學",
+              "value": 7,
+              "detail_long": 7,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中山大學",
+              "value": 6,
+              "detail_long": 6,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺北大學",
+              "value": 6,
+              "detail_long": 6,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣師範大學",
+              "value": 6,
+              "detail_long": 6,
+              "detail_short": 0
+            },
+            {
+              "name": "國立陽明交通大學",
+              "value": 6,
+              "detail_long": 0,
+              "detail_short": 6
+            },
+            {
+              "name": "靜宜大學",
+              "value": 5,
+              "detail_long": 5,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣科技大學",
+              "value": 4,
+              "detail_long": 4,
+              "detail_short": 0
+            },
+            {
+              "name": "大同大學",
+              "value": 4,
+              "detail_long": 4,
+              "detail_short": 0
+            },
+            {
+              "name": "輔仁大學",
+              "value": 4,
+              "detail_long": 4,
+              "detail_short": 0
+            },
+            {
+              "name": "中原大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中央大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立東華大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "銘傳大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "淡江大學學校財團法人淡江大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "元智大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "南臺學校財團法人南臺科技大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中興大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立清華大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺北藝術大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "朝陽科技大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            }
+          ]
+        },
+        {
+          "name": "葡萄牙共和國",
+          "children": [
+            {
+              "name": "國立政治大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            }
+          ]
+        },
+        {
+          "name": "西班牙王國",
+          "children": [
+            {
+              "name": "輔仁大學",
+              "value": 25,
+              "detail_long": 25,
+              "detail_short": 0
+            },
+            {
+              "name": "文藻學校財團法人文藻外語大學",
+              "value": 16,
+              "detail_long": 7,
+              "detail_short": 9
+            },
+            {
+              "name": "國立政治大學",
+              "value": 12,
+              "detail_long": 12,
+              "detail_short": 0
+            },
+            {
+              "name": "淡江大學學校財團法人淡江大學",
+              "value": 12,
+              "detail_long": 12,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣大學",
+              "value": 9,
+              "detail_long": 9,
+              "detail_short": 0
+            },
+            {
+              "name": "靜宜大學",
+              "value": 9,
+              "detail_long": 9,
+              "detail_short": 0
+            },
+            {
+              "name": "國立東華大學",
+              "value": 7,
+              "detail_long": 7,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣師範大學",
+              "value": 5,
+              "detail_long": 5,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中央大學",
+              "value": 4,
+              "detail_long": 4,
+              "detail_short": 0
+            },
+            {
+              "name": "國立暨南國際大學",
+              "value": 4,
+              "detail_long": 4,
+              "detail_short": 0
+            },
+            {
+              "name": "國立彰化師範大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺北科技大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺南大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣科技大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "長榮大學",
+              "value": 2,
+              "detail_long": 2,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中山大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中正大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立嘉義大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立成功大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立清華大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺北教育大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立雲林科技大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "東海大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "逢甲大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "港澳",
+      "children": [
+        {
+          "name": "澳門",
+          "children": [
+            {
+              "name": "國立中山大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            }
+          ]
+        },
+        {
+          "name": "香港",
+          "children": [
+            {
+              "name": "國立臺北大學",
+              "value": 5,
+              "detail_long": 2,
+              "detail_short": 3
+            },
+            {
+              "name": "國立政治大學",
+              "value": 4,
+              "detail_long": 4,
+              "detail_short": 0
+            },
+            {
+              "name": "國立中央大學",
+              "value": 3,
+              "detail_long": 2,
+              "detail_short": 1
+            },
+            {
+              "name": "國立成功大學",
+              "value": 3,
+              "detail_long": 3,
+              "detail_short": 0
+            },
+            {
+              "name": "國立臺灣大學",
+              "value": 2,
+              "detail_long": 1,
+              "detail_short": 1
+            },
+            {
+              "name": "東吳大學",
+              "value": 2,
+              "detail_long": 0,
+              "detail_short": 2
+            },
+            {
+              "name": "國立臺灣師範大學",
+              "value": 1,
+              "detail_long": 1,
+              "detail_short": 0
+            },
+            {
+              "name": "國立陽明交通大學",
+              "value": 1,
+              "detail_long": 0,
+              "detail_short": 1
+            }
+          ]
+        }
+      ]
+    }
+  ]
+};
+
+    // 畫布維度
+    const width = 1200;
+    const height = 750;
+
+    // 自訂溫和、高質感的調色盤
+    const colorScale = d3.scaleOrdinal()
+        .domain(["歐洲", "其他亞洲地區", "北美洲", "大陸地區", "大洋洲", "中美洲", "南美洲", "非洲"])
+        .range(["#4e79a7", "#59a14f", "#e15759", "#edc948", "#b07aa1", "#ff9da7", "#9c755f", "#bab0ac"]);
+
+    // 建立圖例
+    const legendContainer = d3.select("#legend-container");
+    colorScale.domain().forEach(region => {
+        const item = legendContainer.append("div").attr("class", "legend-item");
+        item.append("div")
+            .attr("class", "legend-color")
+            .style("background-color", colorScale(region));
+        item.append("span").text(region);
+    });
+
+    // 初始化 D3 數據根節點
+    let root = d3.hierarchy(rawTreeData)
+        .sum(d => d.value)
+        .sort((a, b) => b.value - a.value);
+
+    // 建立 SVG 容器
+    const svg = d3.select("#chart")
+        .append("svg")
+        .attr("viewBox", [0, 0, width, height])
+        .style("width", "100%")
+        .style("height", "auto");
+
+    // 定義 Treemap 佈局
+    const treemapLayout = d3.treemap()
+        .size([width, height])
+        .paddingOuter(4)
+        .paddingTop(24)
+        .paddingInner(2)
+        .round(true);
+
+    // 獲取 Tooltip 元素
+    const tooltip = d3.select("#tooltip");
+    const wrapper = document.getElementById("chart-wrapper");
+
+    // 渲染函數
+    function renderTreemap() {
+        treemapLayout(root);
+
+        // 綁定資料
+        const nodes = svg.selectAll("g")
+            .data(root.leaves(), d => d.data.name + "-" + (d.parent ? d.parent.data.name : ""));
+
+        // 處理新進入的節點
+        const nodesEnter = nodes.enter()
+            .append("g")
+            .attr("transform", d => `translate(${d.x0},${d.y0})`);
+
+        nodesEnter.append("rect")
+            .attr("class", "node-rect")
+            .attr("fill", d => {
+                let p = d;
+                while (p.depth > 1) p = p.parent;
+                return colorScale(p.data.name) || "#ccc";
+            })
+            .attr("fill-opacity", 0.75)
+            .attr("width", d => Math.max(0, d.x1 - d.x0))
+            .attr("height", d => Math.max(0, d.y1 - d.y0))
+            .on("mouseover", showTooltip)
+            .on("mousemove", moveTooltip)
+            .on("mouseout", hideTooltip);
+
+        nodesEnter.append("text")
+            .attr("class", "node-label")
+            .attr("x", 5)
+            .attr("y", 15);
+
+        nodesEnter.append("text")
+            .attr("class", "node-value")
+            .attr("x", 5)
+            .attr("y", 28);
+
+        // 更新現有及新入節點
+        const nodesMerge = nodesEnter.merge(nodes);
+
+        nodesMerge.transition().duration(750)
+            .attr("transform", d => `translate(${d.x0},${d.y0})`);
+
+        nodesMerge.select("rect")
+            .transition().duration(750)
+            .attr("width", d => Math.max(0, d.x1 - d.x0))
+            .attr("height", d => Math.max(0, d.y1 - d.y0));
+
+        // 智慧型文字隱藏：方塊不夠大就不顯示文字，避免擠成一團
+        nodesMerge.select(".node-label")
+            .text(d => (d.x1 - d.x0 > 65 && d.y1 - d.y0 > 30) ? d.data.name : "")
+            .style("font-weight", "600");
+
+        nodesMerge.select(".node-value")
+            .text(d => (d.x1 - d.x0 > 65 && d.y1 - d.y0 > 30) ? `${d.value} 人` : "");
+
+        // 移除不需要的節點
+        nodes.exit().remove();
+    }
+
+    // 滑鼠互動相關函數
+    function showTooltip(event, d) {
+        const ancestors = d.ancestors().reverse();
+        const region = ancestors[1] ? ancestors[1].data.name : "";
+        const country = ancestors[2] ? ancestors[2].data.name : "";
+        const school = d.data.name;
+
+        tooltip.style("display", "block").html(`
+            <div class="tooltip-title">${school}</div>
+            <div class="tooltip-row"><span>地理區域:</span> <span>${region}</span></div>
+            <div class="tooltip-row"><span>目標國家/地區:</span> <span>${country}</span></div>
+            <div class="tooltip-row" style="margin-top:5px; padding-top:5px; border-top:1px dashed #eee;">
+                <span><strong>本次篩選值:</strong></span> 
+                <span class="tooltip-value">${d.value} 人</span>
+            </div>
+            <div class="tooltip-row" style="font-size:11px; color:#666;">
+                <span>└ 1學期以上:</span> <span>${d.data.detail_long} 人</span>
+            </div>
+            <div class="tooltip-row" style="font-size:11px; color:#666;">
+                <span>└ 未滿1學期:</span> <span>${d.data.detail_short} 人</span>
+            </div>
+        `);
+    }
+
+    // 計算相對圖表容器的位置，避免 tooltip 溢出網頁邊界
+    function moveTooltip(event) {
+        const rect = wrapper.getBoundingClientRect();
+        const x = event.clientX - rect.left + 15;
+        const y = event.clientY - rect.top + 15;
+        tooltip.style("left", x + "px").style("top", y + "px");
+    }
+
+    function hideTooltip() {
+        tooltip.style("display", "none");
+    }
+
+    // 切換指標的流暢動畫更新
+    function updateMetric(metricKey, event) {
+        // 更新按鈕樣式
+        d3.selectAll(".btn").classed("active", false);
+        event.target.classList.add("active");
+
+        // 重新計算權重
+        root.sum(d => {
+            if (metricKey === 'value') return d.value;
+            if (metricKey === 'detail_long') return d.detail_long;
+            if (metricKey === 'detail_short') return d.detail_short;
+            return d.value;
+        });
+        
+        root.sort((a, b) => b.value - a.value);
+        renderTreemap();
+    }
+
+    // 初次執行渲染
+    renderTreemap();
+</script>
+
+</body>
+</html>
