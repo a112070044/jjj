@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>台灣學生出國交流人數動態長條圖</title>
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  
+  <!-- Tabler Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+  
+  <style>
+    :root {
+      --bg-color: #0b0f19;
+      --bg-gradient: radial-gradient(circle at top, #1e293b 0%, #0f172a 100%);
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      
+      --card-bg: rgba(30, 41, 59, 0.45);
+      --card-border: rgba(255, 255, 255, 0.06);
+      --card-hover-border: rgba(255, 255, 255, 0.12);
+      
+      --accent-color: #38bdf8;
+      --accent-glow: rgba(56, 189, 248, 0.2);
+      --accent-purple: #818cf8;
+      
+      --font-sans: 'Outfit', 'Noto Sans TC', sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg-color);
+      background-image: var(--bg-gradient);
+      background-attachment: fixed;
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 24px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1100px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 24px;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+      padding: 30px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      transition: border-color 0.3s ease;
+    }
+
+    .container:hover {
+      border-color: var(--card-hover-border);
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding-bottom: 16px;
+    }
+
+    .header h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .header p {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+
+    /* Layout Panel */
+    .dashboard {
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      gap: 24px;
+    }
+
+    @media (max-width: 850px) {
+      .dashboard {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Info Sidebar */
+    .info-sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .info-card {
+      background: rgba(15, 23, 42, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      border-radius: 16px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .info-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .info-value-big {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: var(--accent-color);
+      font-family: 'Outfit', sans-serif;
+      line-height: 1.1;
+      text-shadow: 0 0 15px var(--accent-glow);
+    }
+
+    .info-value-medium {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #ffffff;
+      margin-top: 4px;
+    }
+
+    .info-desc {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+      line-height: 1.4;
+    }
+
+    /* Chart Area */
+    .chart-container {
+      position: relative;
+      width: 100%;
+      height: 400px;
+      background: rgba(15, 23, 42, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.02);
+      border-radius: 16px;
+      padding: 12px;
+    }
+
+    /* Controls */
+    .controls-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      padding-top: 20px;
+    }
+
+    .buttons-group {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--text-primary);
+      padding: 10px 20px;
+      font-family: var(--font-sans);
+      font-size: 0.85rem;
+      font-weight: 500;
+      border-radius: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+      outline: none;
+    }
+
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.15);
+      transform: translateY(-1px);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    .btn-primary {
+      background: rgba(56, 189, 248, 0.1);
+      border-color: var(--accent-color);
+      color: var(--accent-color);
+      box-shadow: 0 4px 15px rgba(56, 189, 248, 0.05);
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-color);
+      color: #0b0f19;
+      box-shadow: 0 4px 15px rgba(56, 189, 248, 0.2);
+    }
+
+    /* Year selector pills */
+    .year-selector {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .year-selector-label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .year-pills-container {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .yr-pill {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      color: var(--text-secondary);
+      padding: 6px 12px;
+      font-family: var(--font-sans);
+      font-size: 0.75rem;
+      font-weight: 500;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      outline: none;
+    }
+
+    .yr-pill:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-primary);
+      border-color: rgba(255, 255, 255, 0.12);
+    }
+
+    .yr-pill.active {
+      background: var(--accent-color);
+      border-color: var(--accent-color);
+      color: #0f172a;
+      font-weight: 600;
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      border: 0;
+    }
+
+    /* Interactive Modal for Trend Chart */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(15, 23, 42, 0.55);
+      backdrop-filter: blur(8px);
+      z-index: 2000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .modal-overlay.show {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal-content {
+      background: rgba(30, 41, 59, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 24px;
+      padding: 24px;
+      width: 90%;
+      max-width: 650px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+      transform: scale(0.9);
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      position: relative;
+    }
+
+    .modal-overlay.show .modal-content {
+      transform: scale(1);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 12px;
+      margin-bottom: 16px;
+    }
+
+    .modal-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .modal-close-btn {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 1.6rem;
+      cursor: pointer;
+      line-height: 1;
+      padding: 4px;
+      transition: color 0.15s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-close-btn:hover {
+      color: #ffffff;
+    }
+
+    .modal-chart-container {
+      position: relative;
+      width: 100%;
+      height: 320px;
+    }
+  </style>
+</head>
+<body>
+
+  <h2 class="sr-only">台灣學生出國交流人數動態長條圖，105至113學年度前10大熱門國家</h2>
+
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <h1>臺灣學生出國交流熱門目的地動態長條圖</h1>
+      <p>比較 105 至 113 學年度台灣大專院校學生出國交流前 10 大熱門國家人數變化（點擊長條可顯示歷年趨勢）</p>
+    </header>
+
+    <!-- Dashboard -->
+    <div class="dashboard">
+      <!-- Info Sidebar -->
+      <aside class="info-sidebar">
+        <!-- Year Card -->
+        <div class="info-card">
+          <div class="info-title">當前統計區間</div>
+          <div id="year-label" class="info-value-big">105 學年度</div>
+          <div class="info-desc">可點擊下方播放鈕觀看年度變遷之動態排序。</div>
+        </div>
+
+        <!-- Champion Card -->
+        <div class="info-card">
+          <div class="info-title">最熱門目的地 (No.1)</div>
+          <div id="top-country-name" class="info-value-medium">日本</div>
+          <div id="top-country-val" class="info-value-big" style="color: var(--female-color); text-shadow: 0 0 15px rgba(244, 63, 94, 0.15)">2,744 人</div>
+          <div class="info-desc">當學年度出國交流人數最多的國家。</div>
+        </div>
+
+        <!-- Total Card -->
+        <div class="info-card">
+          <div class="info-title">前十國家合計總人數</div>
+          <div id="total-sum-val" class="info-value-big" style="color: var(--accent-purple); text-shadow: 0 0 15px rgba(129, 140, 248, 0.15)">0</div>
+          <div class="info-desc">當年度出國至前十大熱門目的地之總人次。</div>
+        </div>
+      </aside>
+
+      <!-- Chart Viewport -->
+      <main class="chart-container">
+        <canvas id="barChart" role="img" aria-label="各學年度台灣學生出國交流前10大國家人數長條圖"></canvas>
+      </main>
+    </div>
+
+    <!-- Controls Panel -->
+    <footer class="controls-panel">
+      <div class="buttons-group">
+        <button id="playBtn" class="btn btn-primary">
+          <i class="ti ti-player-play-filled" aria-hidden="true"></i> 播放動畫
+        </button>
+        <button id="pauseBtn" class="btn">
+          <i class="ti ti-player-pause-filled" aria-hidden="true"></i> 暫停
+        </button>
+        <button id="resetBtn" class="btn">
+          <i class="ti ti-rotate-clockwise" aria-hidden="true"></i> 重置
+        </button>
+      </div>
+
+      <div class="year-selector">
+        <span class="year-selector-label">快速瀏覽學年度：</span>
+        <div id="year-pills" class="year-pills-container"></div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Historical Trend Modal -->
+  <div id="trend-modal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i class="ti ti-trending-up" style="color:var(--accent-color)"></i>
+          <span id="modal-country-name">國家</span> 出國交流人數歷年走勢圖
+        </div>
+        <button id="modal-close" class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-chart-container">
+        <canvas id="trendChart"></canvas>
+      </div>
+      <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 10px; text-align: right;">
+        * 資料來源：大專院校學生出國交流統計 (105-113學年度)
+      </div>
+    </div>
+  </div>
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  
+  <script>
+    const DATA = {
+      "105": {"日本":2744,"大陸地區":2453,"美國":1585,"大韓民國(南韓)":1180,"德意志聯邦共和國":853,"法國":650,"西班牙王國":444,"加拿大":308,"荷蘭王國":265,"捷克共和國":244},
+      "106": {"日本":3135,"大陸地區":3446,"美國":1491,"大韓民國(南韓)":1431,"德意志聯邦共和國":972,"法國":693,"西班牙王國":443,"加拿大":345,"荷蘭王國":265,"捷克共和國":243},
+      "107": {"日本":2934,"大陸地區":3791,"美國":1290,"大韓民國(南韓)":1539,"德意志聯邦共和國":1118,"法國":694,"西班牙王國":477,"加拿大":298,"荷蘭王國":289,"捷克共和國":296},
+      "108": {"日本":2148,"大陸地區":1630,"美國":938,"大韓民國(南韓)":833,"德意志聯邦共和國":905,"法國":542,"西班牙王國":364,"加拿大":222,"荷蘭王國":255,"捷克共和國":244},
+      "109": {"日本":363,"大陸地區":163,"美國":90,"大韓民國(南韓)":329,"德意志聯邦共和國":328,"法國":114,"西班牙王國":32,"加拿大":8,"荷蘭王國":42,"捷克共和國":64},
+      "110": {"日本":586,"大陸地區":453,"美國":403,"大韓民國(南韓)":506,"德意志聯邦共和國":477,"法國":332,"西班牙王國":111,"加拿大":80,"荷蘭王國":154,"捷克共和國":121},
+      "111": {"日本":2275,"大陸地區":504,"美國":804,"大韓民國(南韓)":898,"德意志聯邦共和國":857,"法國":618,"西班牙王國":304,"加拿大":166,"荷蘭王國":248,"捷克共和國":233},
+      "112": {"日本":2815,"大陸地區":1125,"美國":898,"大韓民國(南韓)":1077,"德意志聯邦共和國":976,"法國":682,"西班牙王國":304,"加拿大":174,"荷蘭王國":285,"捷克共和國":315},
+      "113": {"日本":2771,"大陸地區":1219,"美國":666,"大韓民國(南韓)":1122,"德意志聯邦共和國":1011,"法國":766,"西班牙王國":283,"加拿大":158,"荷蘭王國":304,"捷克共和國":406}
+    };
+
+    const YEARS = Object.keys(DATA);
+    const COUNTRIES = ["日本","大陸地區","美國","大韓民國(南韓)","德意志聯邦共和國","法國","西班牙王國","加拿大","荷蘭王國","捷克共和國"];
+    const COLORS = ["#38bdf8", "#f43f5e", "#fb923c", "#34d399", "#a78bfa", "#f472b6", "#a3e635", "#94a3b8", "#22d3ee", "#e9d5ff"];
+
+    let currentIdx = 0;
+    let timer = null;
+    let trendChartInstance = null;
+
+    function getYearData(year) {
+      const d = DATA[year];
+      const sorted = [...COUNTRIES].sort((a,b) => (d[b]||0) - (d[a]||0));
+      return { labels: sorted, values: sorted.map(c => d[c]||0) };
+    }
+
+    const ctx = document.getElementById('barChart').getContext('2d');
+    const initData = getYearData("105");
+
+    const chart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: initData.labels,
+        datasets: [{
+          label: '人數',
+          data: initData.values,
+          backgroundColor: initData.labels.map(c => getCountryColor(c)),
+          borderRadius: 6,
+          borderSkipped: false
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 750, easing: 'easeInOutQuart' },
+        onHover: (event, chartElement) => {
+          event.native.target.style.cursor = chartElement.length ? 'pointer' : 'default';
+        },
+        onClick: (event, elements, chartInstance) => {
+          if (elements.length > 0) {
+            const index = elements[0].index;
+            const country = chartInstance.data.labels[index];
+            showHistoricalTrend(country);
+          }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+            titleFont: { family: 'Outfit, Noto Sans TC', size: 13, weight: 'bold' },
+            bodyFont: { family: 'Outfit', size: 12 },
+            padding: 10,
+            borderColor: 'rgba(255, 255, 255, 0.1)',
+            borderWidth: 1,
+            callbacks: {
+              label: ctx => ' ' + ctx.raw.toLocaleString() + ' 人'
+            }
+          }
+        },
+        scales: {
+          x: {
+            beginAtZero: true,
+            max: 4200,
+            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+            ticks: {
+              color: '#94a3b8',
+              font: { size: 11, family: 'Outfit' },
+              callback: v => v.toLocaleString()
+            }
+          },
+          y: {
+            ticks: { 
+              color: '#f8fafc', 
+              font: { size: 13, family: 'Outfit, Noto Sans TC', weight: 500 } 
+            },
+            grid: { display: false }
+          }
+        }
+      }
+    });
+
+    // Consistent country colors
+    function getCountryColor(country) {
+      const idx = COUNTRIES.indexOf(country);
+      return COLORS[idx !== -1 ? idx : 0];
+    }
+
+    function updateChart(yearStr) {
+      const d = getYearData(yearStr);
+      chart.data.labels = d.labels;
+      chart.data.datasets[0].data = d.values;
+      chart.data.datasets[0].backgroundColor = d.labels.map(c => getCountryColor(c));
+      chart.update();
+
+      // Update Sidebar Info Panel
+      document.getElementById('year-label').textContent = yearStr + ' 學年度';
+      
+      const topCountry = d.labels[0];
+      const topVal = d.values[0];
+      document.getElementById('top-country-name').textContent = topCountry;
+      document.getElementById('top-country-val').textContent = topVal.toLocaleString() + ' 人';
+
+      const yearRawData = DATA[yearStr];
+      const sum = COUNTRIES.reduce((acc, c) => acc + (yearRawData[c] || 0), 0);
+      document.getElementById('total-sum-val').textContent = sum.toLocaleString();
+
+      // Update pills styles
+      document.querySelectorAll('.yr-pill').forEach(p => {
+        if (p.dataset.year === yearStr) {
+          p.classList.add('active');
+        } else {
+          p.classList.remove('active');
+        }
+      });
+    }
+
+    // Generate year pills
+    const pillContainer = document.getElementById('year-pills');
+    YEARS.forEach(y => {
+      const pill = document.createElement('button');
+      pill.textContent = y + '年';
+      pill.className = 'yr-pill';
+      pill.dataset.year = y;
+      pill.onclick = () => { 
+        stopTimer(); 
+        currentIdx = YEARS.indexOf(y); 
+        updateChart(y); 
+      };
+      pillContainer.appendChild(pill);
+    });
+
+    // Initial render call
+    updateChart("105");
+
+    function stopTimer() {
+      if (timer) { 
+        clearInterval(timer); 
+        timer = null; 
+        document.getElementById('playBtn').innerHTML = '<i class="ti ti-player-play-filled" aria-hidden="true"></i> 播放動畫';
+      }
+    }
+
+    document.getElementById('playBtn').onclick = () => {
+      if (timer) {
+        stopTimer();
+      } else {
+        document.getElementById('playBtn').innerHTML = '<i class="ti ti-player-pause-filled" aria-hidden="true"></i> 暫停播放';
+        timer = setInterval(() => {
+          currentIdx = (currentIdx + 1) % YEARS.length;
+          updateChart(YEARS[currentIdx]);
+          if (currentIdx === YEARS.length - 1) stopTimer();
+        }, 1300);
+      }
+    };
+
+    document.getElementById('pauseBtn').onclick = stopTimer;
+
+    document.getElementById('resetBtn').onclick = () => {
+      stopTimer();
+      currentIdx = 0;
+      updateChart(YEARS[0]);
+    };
+
+    // 14. Show Historical Line Chart inside Modal Popup
+    function showHistoricalTrend(countryName) {
+      // Pause animation if playing
+      stopTimer();
+
+      const yearsData = YEARS.map(year => DATA[year][countryName] || 0);
+
+      const modal = document.getElementById('trend-modal');
+      document.getElementById('modal-country-name').textContent = countryName;
+      modal.classList.add('show');
+
+      const trendCtx = document.getElementById('trendChart').getContext('2d');
+      
+      if (trendChartInstance) {
+        trendChartInstance.destroy();
+      }
+
+      const countryColor = getCountryColor(countryName);
+
+      trendChartInstance = new Chart(trendCtx, {
+        type: 'line',
+        data: {
+          labels: YEARS.map(y => y + '學年度'),
+          datasets: [{
+            label: `${countryName}出國交流人數`,
+            data: yearsData,
+            borderColor: countryColor,
+            backgroundColor: countryColor + '1e', // ~12% opacity fill
+            fill: true,
+            tension: 0.35,
+            borderWidth: 3,
+            pointBackgroundColor: '#ffffff',
+            pointBorderColor: countryColor,
+            pointBorderWidth: 2,
+            pointRadius: 5,
+            pointHoverRadius: 7
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: 'rgba(15, 23, 42, 0.9)',
+              titleFont: { family: 'Outfit, Noto Sans TC', size: 12, weight: 'bold' },
+              bodyFont: { family: 'Outfit', size: 12 },
+              padding: 10,
+              borderColor: 'rgba(255, 255, 255, 0.1)',
+              borderWidth: 1,
+              callbacks: {
+                label: ctx => ` ${ctx.raw.toLocaleString()} 人`
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { color: 'rgba(255, 255, 255, 0.05)' },
+              ticks: { color: '#94a3b8', font: { family: 'Outfit, Noto Sans TC' } }
+            },
+            y: {
+              beginAtZero: true,
+              grid: { color: 'rgba(255, 255, 255, 0.05)' },
+              ticks: { 
+                color: '#94a3b8', 
+                font: { family: 'Outfit' },
+                callback: v => v.toLocaleString()
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function closeModal() {
+      const modal = document.getElementById('trend-modal');
+      modal.classList.remove('show');
+      if (trendChartInstance) {
+        setTimeout(() => {
+          if (trendChartInstance) {
+            trendChartInstance.destroy();
+            trendChartInstance = null;
+          }
+        }, 300); // Wait for transition fade out
+      }
+    }
+
+    // Modal close listeners
+    document.getElementById('modal-close').onclick = closeModal;
+    document.getElementById('trend-modal').onclick = (e) => {
+      if (e.target === document.getElementById('trend-modal')) {
+        closeModal();
+      }
+    };
+  </script>
+</body>
+</html>
